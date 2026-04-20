@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
-from app.api import appeal, auth
+from app.api import appeal, auth, account
 
 app = FastAPI()
 app.include_router(appeal)
 app.include_router(auth)
+app.include_router(account)

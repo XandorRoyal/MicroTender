@@ -30,13 +30,6 @@ class AccountRepository(BaseRepository):
             row = cursor.fetchone()
             return row["minecraft_username"] if row else None
 
-    def get_id_from_discord(self, discord_id: str):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"SELECT id FROM {self.table_name} WHERE discord_id = ?", (discord_id,))
-            row = cursor.fetchone()
-            return row["id"] if row else None
-
     def get_balance(self, discord_id: str):
         with self.get_connection() as conn:
             cursor = conn.cursor()

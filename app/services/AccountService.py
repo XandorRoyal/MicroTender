@@ -29,9 +29,6 @@ class AccountService:
     def unlink_minecraft_account(self, discord_id: str):
         self.repository.link_minecraft_account(discord_id, None)
 
-    def get_id_from_discord(self, discord_id: str):
-        return self.repository.get_id_from_discord(discord_id)
-
     def get_balance(self, discord_id: str):
         return self.repository.get_balance(discord_id)
     

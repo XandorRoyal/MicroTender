@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     PROTOCOL: str
     BASE_URL: str
     PORT: int
+    HOT_RELOAD: bool = False
 
     # Discord Connection Settings
     APP_ID: str

@@ -1,0 +1,21 @@
+services:
+  tender-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tender-api
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT:-3000}
+      DB_NAME: ${DB_NAME:-/app/data/Tender.db}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - tender_data:/app/data
+    command: sh -c "mkdir -p \"$(dirname \"$DB_NAME\")\" && touch \"$DB_NAME\" && alembic upgrade head && python -m app"
+    restart: unless-stopped
+
+volumes:
+  tender_data:

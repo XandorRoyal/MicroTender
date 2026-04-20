@@ -1,0 +1,7 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic-settings>=2.0,<3.0
+SQLAlchemy>=2.0,<3.0
+alembic>=1.13,<2.0
+requests>=2.31,<3.0
+discord-oauth2.py>=1.2,<2.0
