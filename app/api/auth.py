@@ -23,10 +23,10 @@ async def authenticate(code: str = Query(...)):
     print(f"User identity: {identity}")
 
 @auth_router.post("/verify_minecraft/{discord_id}")
-def verify_minecraft(discord_id: str, mc_username: str, service: AuthService = Depends(AuthService.depends_init), account_service: AccountService = Depends(AccountService.depends_init)):
+async def verify_minecraft(discord_id: str, mc_username: str, service: AuthService = Depends(AuthService.depends_init), account_service: AccountService = Depends(AccountService.depends_init)):
     verified = service.verify_minecraft_user(mc_username) 
     if verified:
         print("Verified!")
         # Link the Minecraft account to the Discord user
-        account_service.link_minecraft_account(discord_id, mc_username)
+        await account_service.link_minecraft_account(discord_id, mc_username)
     return verified

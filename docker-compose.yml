@@ -8,14 +8,34 @@ services:
       - .env
     environment:
       PORT: ${PORT:-3000}
-      DB_NAME: ${DB_NAME:-/app/data/Tender.db}
     ports:
       - "3000:3000"
     volumes:
       - ./:/app
-      - tender_data:/app/data
-    command: sh -c "mkdir -p \"$(dirname \"$DB_NAME\")\" && touch \"$DB_NAME\" && alembic upgrade head && python -m app"
+    command: sh -c "alembic upgrade head && python -m app"
+    depends_on:
+      repository:
+        condition: service_healthy
+    restart: unless-stopped
+  
+  repository:
+    container_name: postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: tender
+      POSTGRES_PASSWORD: tender_password
+      POSTGRES_DB: tender_db
+      PGDATA: /data/postgres
+    volumes:
+      - tender_data_v2:/data/postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tender} -d ${POSTGRES_DB:-tender_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:
-  tender_data:
+  tender_data_v2:

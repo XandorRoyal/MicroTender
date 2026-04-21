@@ -16,7 +16,13 @@ class Settings(BaseSettings):
     MC_VERIFY_URL: str
 
     # Database Settings
+    DB_USER: str
+    DB_PASSWORD: str
+    DB_HOST: str
+    DB_PORT: int
     DB_NAME: str
+    DB_MAX_POOL_SIZE: int = 10
+    DB_MIN_POOL_SIZE: int = 9
 
     model_config = SettingsConfigDict(env_file=".env")
 

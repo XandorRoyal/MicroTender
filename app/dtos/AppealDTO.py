@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from app.dtos.BaseDTO import BaseDTO
 
-class AppealDTO(BaseModel):
+class AppealDTO(BaseDTO):
     id: int = None
     appealer_id: str
     title: str

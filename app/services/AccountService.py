@@ -1,7 +1,9 @@
 
+from asyncpg import UniqueViolationError
 from fastapi import Depends
 
-from app.dependencies.get_account_repository import get_account_repository
+from app.api.exceptions import DuplicateEntry
+from app.api.dependencies.get_account_repository import get_account_repository
 from app.repositories import AccountRepository
 
 
@@ -17,20 +19,23 @@ class AccountService:
     def __init__(self, repository: AccountRepository):
         self.repository = repository
 
-    def create_account(self, discord_id: str):
-        self.repository.create_account(discord_id)
+    async def create_account(self, discord_id: str):
+        try:
+            return await self.repository.create_account(discord_id)
+        except UniqueViolationError:
+            raise DuplicateEntry(f"An account with discord_id {discord_id} already exists.")
 
-    def link_minecraft_account(self, discord_id: str, mc_username: str):
-        self.repository.link_minecraft_account(discord_id, mc_username)
+    async def link_minecraft_account(self, discord_id: str, mc_username: str):
+        await self.repository.link_minecraft_account(discord_id, mc_username)
 
-    def get_linked_minecraft_username(self, discord_id: str):
-        return self.repository.get_linked_minecraft_username(discord_id)
+    async def get_linked_minecraft_username(self, discord_id: str):
+        return await self.repository.get_linked_minecraft_username(discord_id)
 
-    def unlink_minecraft_account(self, discord_id: str):
-        self.repository.link_minecraft_account(discord_id, None)
+    async def unlink_minecraft_account(self, discord_id: str):
+        return await self.repository.link_minecraft_account(discord_id, None)
 
-    def get_balance(self, discord_id: str):
-        return self.repository.get_balance(discord_id)
+    async def get_balance(self, discord_id: str):
+        return await self.repository.get_balance(discord_id)
     
-    def update_balance(self, discord_id: str, amount: float):
-        self.repository.update_balance(discord_id, amount)
+    async def update_balance(self, discord_id: str, amount: float):
+        return await self.repository.update_balance(discord_id, amount)
