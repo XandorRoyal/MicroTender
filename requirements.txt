@@ -5,3 +5,4 @@ SQLAlchemy>=2.0,<3.0
 alembic>=1.13,<2.0
 requests>=2.31,<3.0
 discord-oauth2.py>=1.2,<2.0
+asyncpg>=0.28,<1.0

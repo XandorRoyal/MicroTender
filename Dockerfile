@@ -1,8 +1,7 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DB_NAME=/app/data/Tender.db
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
@@ -13,4 +12,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "mkdir -p \"$(dirname \"${DB_NAME}\")\" && touch \"${DB_NAME}\" && alembic upgrade head && python -m app"]
+CMD ["sh", "-c", "alembic upgrade head && python -m app"]

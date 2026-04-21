@@ -1,8 +1,9 @@
-from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List
+
+from app.dtos.BaseDTO import BaseDTO
 from .AppealDTO import AppealDTO
 
-class PaginationDTO(BaseModel):
+class PaginationDTO(BaseDTO):
     page: int = 1
     page_size: int = 10
     total: int = 0
