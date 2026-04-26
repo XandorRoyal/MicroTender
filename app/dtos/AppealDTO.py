@@ -5,8 +5,9 @@ class AppealDTO(BaseDTO):
     appealer_id: str
     title: str
     description: str
-    amount: float
+    target: float
     monthly_interest: float = 0 
-    remaining_amount: float = 0
-    pledged: float = 0
+    principal: float = 0
+    interest: float = 0
     status: str = "pending"
+    created_at: str = None

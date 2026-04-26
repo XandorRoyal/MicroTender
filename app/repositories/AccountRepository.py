@@ -2,25 +2,22 @@ from app.models import AccountModel
 from app.repositories.DatasbaseManager import DatabaseManager
 from app.settings import Settings
 
-from .BaseRepository import BaseRepository
-
-class AccountRepository(BaseRepository):
+class AccountRepository():
     def __init__(self, settings: Settings, database_manager: DatabaseManager):
-        super().__init__(settings)
         self.table_name = "accounts"
         self.database_manager = database_manager
 
     async def create_account(self, discord_id: str) -> AccountModel:
         query = """
-        INSERT INTO accounts (discord_id) VALUES ($1) RETURNING *
+        INSERT INTO accounts (discord_id, created_at) VALUES ($1, NOW()) RETURNING *
         """
         model = await self.database_manager.fetchone(query, [discord_id], AccountModel)
         return model
 
     async def link_minecraft_account(self, discord_id: str, mc_username: str):
         query = f"""
-        INSERT INTO {self.table_name} (discord_id, minecraft_username)
-        VALUES ($1, $2)
+        INSERT INTO {self.table_name} (discord_id, minecraft_username, created_at)
+        VALUES ($1, $2, NOW())
         ON CONFLICT(discord_id)
         DO UPDATE SET minecraft_username = EXCLUDED.minecraft_username
         RETURNING *
@@ -29,7 +26,6 @@ class AccountRepository(BaseRepository):
         return model
 
     async def get_linked_minecraft_username(self, discord_id: str):
-        print(100)
         query = f"SELECT minecraft_username FROM {self.table_name} WHERE discord_id = $1"
         async with self.database_manager.get_connection() as conn:
             row = await conn.fetchrow(query, discord_id)

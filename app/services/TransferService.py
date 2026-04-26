@@ -1,6 +1,7 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
 from app.api.dependencies import get_transfer_repository
+from app.api.exceptions import AppealNotFound, InsufficientFunds
 from app.models import AppealTransactionModel
 from app.repositories import TransferRepository
 from app.services.AccountService import AccountService
@@ -34,8 +35,11 @@ class TransferService():
         return await self.transfer_repository.get_transfer(transfer_id)
     
     async def lend(self, discord_id, appeal_id, amount):
+        appeal = await self.appeal_service.get_appeal(appeal_id)
+        if appeal.status != "funding":
+            raise HTTPException(status_code=400, detail="Appeal is not open for funding")  
         if await self.account_service.get_balance(discord_id) <= amount:
-            raise ValueError("Insufficient balance to lend")
+            raise InsufficientFunds("Insufficient balance to lend")
         await self.account_service.update_balance(discord_id, -amount)
         await self.appeal_service.update_appeal_pledged(appeal_id, amount)
         return await self.transfer_repository.create_transfer(appeal_id, discord_id, amount, 'lending')
@@ -56,19 +60,26 @@ class TransferService():
     async def payback(self, appeal_id, discord_id, amount):
         appeal = await self.appeal_service.get_appeal(appeal_id)
         if appeal is None:
-            raise ValueError("Appeal not found")
+            raise AppealNotFound("Appeal not found")
         if appeal.status != "active":
-            raise ValueError("Appeal is not active")
+            raise HTTPException(status_code=400, detail="Appeal is not active")
         if appeal.pledged <= 0:
-            raise ValueError("Appeal has no pledged amount")
+            raise HTTPException(status_code=400, detail="Appeal has no pledged amount")
         if appeal.appealer_id != discord_id:
-            raise ValueError("Only the appealer can repay the appeal")
+            raise HTTPException(status_code=403, detail="Only the appealer can repay the appeal")
         if await self.account_service.get_balance(discord_id) <= amount:
-            raise ValueError("Insufficient balance to repay")
-
-        await self.appeal_service.update_appeal_amount_remaining(appeal_id, -amount)
-        await self.account_service.update_balance(discord_id, -amount)
+            raise InsufficientFunds("Insufficient balance to repay")
         lending_transfers = await self.transfer_repository.get_transfers_for_appeal_lending(appeal_id)
+        if discord_id not in lending_transfers.items():
+            raise HTTPException(status_code=400, detail="Appeal has no lending transfers")
+        appeal_interest = appeal.interest
+
+        if amount > appeal_interest:
+            await self.appeal_service.deduct_interest(appeal_id, appeal_interest)
+            amount -= appeal_interest
+        if amount > 0:
+            await self.appeal_service.update_appeal_amount_remaining(appeal_id, -amount)
+        await self.account_service.update_balance(discord_id, -amount)
         accounts_to_percent = self.get_percentage_funded(appeal, lending_transfers)
 
         # Distribute the repayment amount proportionally to lenders based on their percentage

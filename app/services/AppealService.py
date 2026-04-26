@@ -1,4 +1,5 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
+from app.api.exceptions import AppealNotFound, InsufficientFunds
 from app.dtos import AppealDTO, PaginatedAppealsDTO
 from app.repositories import AppealRepository
 from app.api.dependencies import get_appeal_repository
@@ -20,13 +21,21 @@ class AppealService():
     async def create_appeal(self, appeal: AppealDTO):
         is_linked = await self.account_service.get_linked_minecraft_username(appeal.appealer_id) is not None
         if not is_linked:
-            raise ValueError("Discord account must be linked to a Minecraft account to create an appeal")
+            raise HTTPException(status_code=401, detail="Discord account must be linked to a Minecraft account to create an appeal")
+        if appeal.target <= 0:
+            raise HTTPException(status_code=400, detail="Target amount must be greater than 0")
+        if appeal.monthly_interest < 0:
+            appeal.status = "pending"
+        else:
+            appeal.status = "funding"
         return AppealDTO.from_model(await self.repository.create_appeal(appeal))
 
     async def get_appeal(self, appeal_id):
         appeal = await self.repository.get_appeal(appeal_id)
+        if not appeal:
+            raise AppealNotFound(detail="Appeal not found")
         return AppealDTO.from_model(appeal)
-
+    
     async def get_appeals(self, page: int = 1, page_size: int = 10):
         paginated = await self.repository.get_appeals(page, page_size)
         paginated["data"] = [AppealDTO.from_model(appeal) for appeal in paginated["data"]]
@@ -35,31 +44,38 @@ class AppealService():
     async def update_appeal_pledged(self, appeal_id, amount):
         appeal = await self.repository.get_appeal(appeal_id)
         if not appeal:
-            raise ValueError("Appeal not found")
+            raise AppealNotFound(detail="Appeal not found")
         new_pledged = appeal.pledged + amount
         return await self.repository.update_appeal_pledged(appeal_id, new_pledged)
 
     async def apply_interest(self, appeal_id):
         appeal = await self.repository.get_appeal(appeal_id)
         if not appeal:
-            raise ValueError("Appeal not found")
-        new_amount = appeal.remaining_amount * (1 + appeal.monthly_interest)
-        return await self.repository.update_amount_remaining(appeal_id, new_amount)
+            raise AppealNotFound(detail="Appeal not found")
+        interest = appeal.remaining_amount * (appeal.monthly_interest)
+        return await self.repository.update_interest(appeal_id, interest)
+
+    async def deduct_interest(self, appeal_id, amount):
+        appeal = await self.repository.get_appeal(appeal_id)
+        if not appeal:
+            raise AppealNotFound(detail="Appeal not found")
+        new_interest = max(appeal.interest - amount, 0)
+        return await self.repository.update_interest(appeal_id, new_interest)
 
     async def update_appeal_amount_remaining(self, appeal_id, amount):
         appeal = await self.repository.get_appeal(appeal_id)
         if not appeal:
-            raise ValueError("Appeal not found")
+            raise AppealNotFound(detail="Appeal not found")
         new_remaining = appeal.remaining_amount + amount
         return await self.repository.update_amount_remaining(appeal_id, new_remaining)
 
     async def set_appeal_active(self, appeal_id):
         appeal = await self.repository.get_appeal(appeal_id)
         if not appeal:
-            raise ValueError("Appeal not found")
+            raise AppealNotFound(detail="Appeal not found")
         pledged = appeal.pledged
         if pledged <= 0:
-            raise ValueError("Cannot activate appeal with no pledged amount")
+            raise InsufficientFunds("Cannot activate appeal with no pledged amount")
         await self.repository.update_amount_remaining(appeal_id, pledged)
         await self.account_service.update_balance(appeal.appealer_id, pledged)
         return AppealDTO.from_model(await self.repository.update_appeal_status(appeal_id, "active"))

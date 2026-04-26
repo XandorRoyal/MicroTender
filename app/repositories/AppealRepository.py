@@ -3,11 +3,8 @@ from app.models import AppealModel
 from app.repositories.DatasbaseManager import DatabaseManager
 from app.settings import Settings
 
-from .BaseRepository import BaseRepository
-
-class AppealRepository(BaseRepository):
+class AppealRepository():
     def __init__(self, settings: Settings, database_manager: DatabaseManager):
-        super().__init__(settings)
         self.table_name = "appeals"
         self.database_manager = database_manager
 
@@ -19,19 +16,19 @@ class AppealRepository(BaseRepository):
                 appealer_id=row["appealer_id"],
                 title=row["title"],
                 description=row["description"],
-                amount=row["amount"],
+                target=row["target"],
                 monthly_interest=row["monthly_interest"],
-                remaining_amount=row["remaining_amount"],
-                pledged=row["pledged"],
+                principal=row["principal"],
                 status=row["status"],
+                created_at=row["created_at"],
             )
         return None
     
     async def create_appeal(self, appeal: AppealDTO):
         query = f"""
-            INSERT INTO {self.table_name} (appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status)
+            INSERT INTO {self.table_name} (appealer_id, title, description, target, principal, monthly_interest, status, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            RETURNING *
         """
         async with self.database_manager.get_connection() as conn:
             row = await conn.fetchrow(
@@ -39,29 +36,29 @@ class AppealRepository(BaseRepository):
                 appeal.appealer_id,
                 appeal.title,
                 appeal.description,
-                appeal.amount,
+                appeal.target,
+                appeal.principal,
                 appeal.monthly_interest,
-                appeal.remaining_amount,
-                appeal.pledged,
                 appeal.status,
+                appeal.created_at,
             )
             return self._row_to_appeal(row)
         
 
     async def get_appeal(self, appeal_id):
         query = """
-            SELECT id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            SELECT *
             FROM appeals
             WHERE id = $1
         """
         async with self.database_manager.get_connection() as conn:
-            row = await conn.fetchrow(query, appeal_id)
+            row = await conn.fetchrow(query, int(appeal_id))
             return self._row_to_appeal(row)
 
     async def get_appeals(self, page: int = 1, page_size: int = 10):
         count_query = f"SELECT COUNT(*) FROM {self.table_name}"
         data_query = """
-            SELECT id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            SELECT *
             FROM appeals
             ORDER BY id DESC
             LIMIT $1 OFFSET $2
@@ -88,7 +85,7 @@ class AppealRepository(BaseRepository):
             UPDATE appeals
             SET status = $1
             WHERE id = $2
-            RETURNING id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            RETURNING *
         """
         async with self.database_manager.get_connection() as conn:
             row = await conn.fetchrow(query, new_status, appeal_id)
@@ -99,19 +96,30 @@ class AppealRepository(BaseRepository):
             UPDATE appeals
             SET pledged = $1
             WHERE id = $2
-            RETURNING id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            RETURNING *
         """
         async with self.database_manager.get_connection() as conn:
             row = await conn.fetchrow(query, new_pledged, appeal_id)
             return self._row_to_appeal(row)
 
-    async def update_amount_remaining(self, appeal_id, new_remaining_amount):
+    async def update_interest(self, appeal_id, new_interest):
+        query = """
+            UPDATE appeals
+            SET interest = $1
+            WHERE id = $2
+            RETURNING *
+        """
+        async with self.database_manager.get_connection() as conn:
+            row = await conn.fetchrow(query, new_interest, appeal_id)
+            return self._row_to_appeal(row)
+
+    async def update_amount_remaining(self, appeal_id, new_amount_remaining):
         query = """
             UPDATE appeals
             SET remaining_amount = $1
             WHERE id = $2
-            RETURNING id, appealer_id, title, description, amount, monthly_interest, remaining_amount, pledged, status
+            RETURNING *
         """
         async with self.database_manager.get_connection() as conn:
-            row = await conn.fetchrow(query, new_remaining_amount, appeal_id)
+            row = await conn.fetchrow(query, new_amount_remaining, appeal_id)
             return self._row_to_appeal(row)
