@@ -4,12 +4,10 @@ from datetime import datetime
 from app.models import AppealTransactionModel
 from app.repositories.DatasbaseManager import DatabaseManager
 from app.settings import Settings
-from app.repositories.BaseRepository import BaseRepository
 
 
-class TransferRepository(BaseRepository):
+class TransferRepository():
     def __init__(self, settings: Settings, database_manager: DatabaseManager):
-        super().__init__(settings)
         self.database_manager = database_manager
 
     def _row_to_transfer(self, row):
